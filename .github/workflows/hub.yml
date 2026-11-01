@@ -3,6 +3,7 @@ name: sonix-hub
 on:
   schedule:
     - cron: "7 * * * *"          # every hour at :07 UTC (GitHub may start a few minutes late)
+    - cron: "11 4 1 * *"         # monthly keepalive: GitHub disables schedules after 60 days of no commits
   workflow_dispatch: {}          # "Run workflow" button for manual runs
 
 permissions:
@@ -66,3 +67,21 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  keepalive:
+    # GitHub disables scheduled workflows after 60 days without commits.
+    # One tiny commit a month keeps the hourly schedule alive.
+    if: github.event_name == 'schedule' && github.event.schedule == '11 4 1 * *'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Touch keepalive file
+        run: |
+          date -u +"keepalive %Y-%m-%dT%H:%MZ" > .keepalive
+          git config user.name sonix-hub-bot
+          git config user.email sonix-hub-bot@users.noreply.github.com
+          git add .keepalive
+          git commit -m "chore: keepalive $(date -u +%Y-%m)"
+          git push
