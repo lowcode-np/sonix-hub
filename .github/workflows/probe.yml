@@ -36,6 +36,32 @@ jobs:
                   print("MODEL", m["name"].split("/")[-1], "|", m.get("displayName", ""))
           PY
 
+      - name: Try a real generateContent call per candidate model
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.error, urllib.request
+          key = os.environ["GEMINI_API_KEY"]
+          body = json.dumps({"contents": [{"role": "user", "parts": [{"text": "reply with {\"ok\":1}"}]}],
+                             "generationConfig": {"temperature": 0, "maxOutputTokens": 32,
+                                                  "responseMimeType": "application/json"}}).encode()
+          for m in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash",
+                    "gemini-3.8-flash", "gemini-3.1-flash-lite"]:
+              url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent"
+              req = urllib.request.Request(url, data=body, method="POST",
+                                           headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as r:
+                      j = json.load(r)
+                  txt = j["candidates"][0]["content"]["parts"][0]["text"]
+                  print(f"{m:<26} OK   {txt[:40]!r}")
+              except urllib.error.HTTPError as e:
+                  print(f"{m:<26} HTTP {e.code} {e.read().decode('utf-8', 'replace')[:180]}")
+              except Exception as e:
+                  print(f"{m:<26} FAIL {type(e).__name__}: {str(e)[:120]}")
+          PY
+
       - name: Probe RSS sources from the runner network
         run: |
           python - <<'PY'
