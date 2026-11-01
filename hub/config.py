@@ -38,6 +38,9 @@ RSS_FEEDS = [x for x in env("RSS_FEEDS", "").split("|") if x] or [
     "https://www.federalreserve.gov/feeds/press_all.xml",
     "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
     "https://www.mining.com/feed/",
+    # non-Google sources so a Google News 503 does not leave the feed with zero headlines
+    "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    "https://feeds.bbci.co.uk/news/business/rss.xml",
 ]
 CALENDAR_URL = env("CALENDAR_URL", "https://nfs.faireconomy.media/ff_calendar_thisweek.json")
 FLOW_SYMBOL = env("FLOW_SYMBOL", "PAXGUSDT")
