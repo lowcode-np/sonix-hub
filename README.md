@@ -302,6 +302,8 @@ bench.bat                      # เทียบ Gemini กับ ThaiLLM 3 ร�
 ## ปฏิบัติการ (ops)
 
 - ดูสถานะเร็ว: `curl /healthz` — ถ้า `stale: true` นานผิดปกติ ให้ดู `last_error` ที่ `/v1/meta`
+- ถ้า Gemini ตอบ 404/503 หรือ RSS แหล่งใดพัง: Actions → **probe-feeds** → Run workflow
+  จะไล่รายชื่อโมเดลที่เรียกได้จริง + ทดสอบยิง `generateContent` และเช็ค feed ทุกแหล่งจาก IP ของ runner
 - rebuild ด้วยมือ: `curl -X POST "http://HOST:8080/admin/refresh?k=TOKEN"`
 - log ไม่พิมพ์ query string (กัน token หลุด) และตัด `?` ออกทุกบรรทัด
 - ไฟล์ state ถูกเขียนทุกชั่วโมง → backup แค่ `v1/history.json` พอ (กู้ประวัติ backtest)
