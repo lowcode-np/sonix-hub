@@ -131,25 +131,28 @@ curl "http://127.0.0.1:8080/healthz"
 2. Settings → Secrets and variables → Actions
    - Secrets: `GEMINI_API_KEY`, `THAILLM_API_KEY` (ตัวใดตัวหนึ่งก็พอ)
    - Variables (ไม่บังคับ): `GEMINI_MODEL`, `THAILLM_MODEL`, `LLM_ORDER`, `FEED_URL`
-3. Actions → sonix-hub → **Run workflow** (รันมือครั้งแรก) → ต้องเขียว
-4. Settings → Pages → Source: **Deploy from a branch** → `gh-pages` / `/ (root)`
+3. Settings → Pages → Source: **GitHub Actions** (ไม่ต้องมี branch `gh-pages`)
+4. Actions → sonix-hub → **Run workflow** (รันมือครั้งแรก) → ต้องเขียวทั้ง `build` และ `deploy`
 5. URL ของ EA: `https://<user>.github.io/<repo>/v1/xauusd.json`
    - ไม่มี token, ไม่ต้องเปิด firewall, ไม่ต้องมี VPS
    - MT5 → Allow WebRequest → เพิ่ม `https://<user>.github.io`
 6. ตั้ง Variable `FEED_URL` = URL ข้อ 5 → `history.json` ต่อเนื่องข้ามรอบ (ไม่งั้นเริ่มนับ 1 จุดทุกชั่วโมง)
    - `FEED_URL` = URL ของ feed **ตัวเราเอง** ไม่ใช่แหล่งข่าวภายนอก
    - โค้ดจะตัดชื่อไฟล์ออกแล้วดึง `.../v1/history.json` จากโดเมนเดียวกัน
-7. repo private → สร้าง public repo `sonix-feed` + Variable `FEED_REPO=<user>/sonix-feed` + Secret `FEED_TOKEN` (PAT, repo scope)
 
 ข้อควรรู้ของโหมดนี้
 
 - cron ของ GitHub เป็น best-effort: ปกติคลาด 5-15 นาที, ช่วงคนใช้เยอะอาจช้าเป็นชั่วโมง → EA ต้องเช็ค `ts` + `ttl` ทุกครั้งอยู่แล้ว
 - Pages cache ~10 นาที (`Cache-Control: max-age=600`) → อย่าตั้ง `ttl` สั้นกว่า 15 นาที
-  - ต้องการดูไฟล์ดิบที่ยังไม่ผ่าน CDN: `https://raw.githubusercontent.com/<user>/<repo>/gh-pages/v1/xauusd.json`
-  - ไฟล์บน branch คือของจริง; CDN อาจตามช้าสุด ~13 นาที (cache + deploy) ไม่ใช่ feed ค้าง
+  - CDN อาจตามช้าสุด ~13 นาทีหลัง deploy (cache + propagation) ไม่ใช่ feed ค้าง
+  - ตรวจว่า build ล่าสุดผ่านจริง: Actions → sonix-hub → job `deploy`
+- อย่ากด Run workflow รัว ๆ: Pages จำกัด build ~10 ครั้ง/ชม. เกินแล้วจะขึ้น "Page build failed"
+  (ตอนนี้ใช้ Actions artifact deploy จึงไม่ติดเพดานเดิม แต่ยังควรปล่อยให้ cron ทำงานเอง)
 - ไม่มี commit 60 วัน GitHub จะปิด scheduled workflow (มีอีเมลแจ้ง) → กด Enable ใหม่หรือให้ bot commit ทุกเดือน
 - ไม่มี `/healthz` ให้เช็ค → ดูสถานะได้ที่ `status.errors` ในไฟล์ JSON และหน้า Actions
 - workflow มี step `Validate feed` แล้ว — ไฟล์เสียจะไม่ถูก publish ทับของดี
+- ต้องมี Environment `github-pages` (สร้างอัตโนมัติตอนเปิด Pages) และ Deployment branches ต้องอนุญาต `main`
+  ถ้า key อยู่ใน Environment secrets แต่ job ไม่ได้ประกาศ `environment:` จะเห็นเป็น "GEMINI_API_KEY not set"
 
 ## Windows VPS: URL ที่ EA ใช้
 
