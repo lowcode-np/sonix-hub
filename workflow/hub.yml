@@ -7,9 +7,7 @@ on:
   workflow_dispatch: {}          # "Run workflow" button for manual runs
 
 permissions:
-  contents: read
-  pages: write                   # publish the feed with the official Pages actions
-  id-token: write                # required by deploy-pages
+  contents: write                # publish ./public to the gh-pages branch
 
 concurrency:
   group: sonix-hub
@@ -54,19 +52,27 @@ jobs:
           print("feed ok:", d["bias"], d["score"], d["provider"], "errors", len(d["status"]["errors"]))
           PY
 
-      - uses: actions/upload-pages-artifact@v3
+      # GitHub Pages' branch builder is currently wedged for this repo (stuck deployment,
+      # "Page build failed" with duration 0), so the feed goes to the gh-pages branch and is
+      # served through jsDelivr instead: https://cdn.jsdelivr.net/gh/<repo>@gh-pages/v1/xauusd.json
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: ./public
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: sonix-hub-bot
+          user_email: sonix-hub-bot@users.noreply.github.com
+          commit_message: "feed update"
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      # jsDelivr caches branch files; purge so the new feed is live within seconds
+      - name: Purge CDN cache
+        run: |
+          for f in v1/xauusd.json v1/history.json; do
+            echo "purge $f"
+            curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@gh-pages/$f" || true
+          done
 
   keepalive:
     # GitHub disables scheduled workflows after 60 days without commits.
