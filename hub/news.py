@@ -59,7 +59,7 @@ def _norm(t):
     return re.sub(r"[^a-z0-9]+", " ", t).strip()[:80]
 
 
-def collect(now, max_items=30, max_age_h=24):
+def collect(now, max_items=30, max_age_h=24, max_per_source=10):
     seen, out, errs = set(), [], []
     for url in config.RSS_FEEDS:
         src = re.sub(r"^https?://(www\.)?", "", url).split("/")[0]
@@ -77,7 +77,17 @@ def collect(now, max_items=30, max_age_h=24):
         except Exception as e:
             errs.append(f"rss.{src}: {e}")
     out.sort(key=lambda x: x["ts"], reverse=True)
-    return out[:max_items], errs
+    # Google News publishes every minute and would crowd out every other feed,
+    # so cap how many items a single source may contribute.
+    per_src, picked = {}, []
+    for it in out:
+        if per_src.get(it["src"], 0) >= max_per_source:
+            continue
+        per_src[it["src"]] = per_src.get(it["src"], 0) + 1
+        picked.append(it)
+        if len(picked) >= max_items:
+            break
+    return picked, errs
 
 
 def utc_str(ts):
