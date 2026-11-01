@@ -81,7 +81,9 @@ def build(now):
         "flow": fl, "cot": ct,
         "calendar": (ec or {}).get("events", []),
         "headlines": top[:12],
-        "status": {"ok": len(errs) == 0, "errors": errs[:20]},
+        # ok = the feed is usable (gold price present, score computed); degraded = some sources failed.
+        # A blocked RSS feed from a cloud IP must not make the EA think the whole feed is broken.
+        "status": {"ok": bool((px or {}).get("gc")), "degraded": len(errs) > 0, "errors": errs[:20]},
     }
 
 
