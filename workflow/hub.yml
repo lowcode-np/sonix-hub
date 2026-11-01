@@ -52,9 +52,8 @@ jobs:
           print("feed ok:", d["bias"], d["score"], d["provider"], "errors", len(d["status"]["errors"]))
           PY
 
-      # GitHub Pages' branch builder is currently wedged for this repo (stuck deployment,
-      # "Page build failed" with duration 0), so the feed goes to the gh-pages branch and is
-      # served through jsDelivr instead: https://cdn.jsdelivr.net/gh/<repo>@gh-pages/v1/xauusd.json
+      # Publish the feed to the gh-pages branch. The EA reads it from
+      # https://raw.githubusercontent.com/<repo>/gh-pages/v1/xauusd.json (5 min CDN cache).
       - name: Publish to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -65,14 +64,6 @@ jobs:
           user_name: sonix-hub-bot
           user_email: sonix-hub-bot@users.noreply.github.com
           commit_message: "feed update"
-
-      # jsDelivr caches branch files; purge so the new feed is live within seconds
-      - name: Purge CDN cache
-        run: |
-          for f in v1/xauusd.json v1/history.json; do
-            echo "purge $f"
-            curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@gh-pages/$f" || true
-          done
 
   keepalive:
     # GitHub disables scheduled workflows after 60 days without commits.

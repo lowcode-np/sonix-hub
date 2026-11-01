@@ -149,6 +149,9 @@ curl "http://127.0.0.1:8080/healthz"
 - jsDelivr cache ยาว (12 ชม.) แต่ workflow purge ให้ทุกครั้งหลัง publish → ปกติเห็นของใหม่ภายใน 1 นาที
   ถ้าค่าไม่ขยับ: เปิด `https://purge.jsdelivr.net/gh/<user>/<repo>@gh-pages/v1/xauusd.json` แล้วโหลดใหม่
 - อย่ากด Run workflow รัว ๆ — เสีย Actions minutes โดยไม่จำเป็น (public repo ฟรีแต่ก็เปลืองเวลา)
+- ตรวจว่า schedule ทำงานเองจริง: `gh run list --repo <user>/<repo> --event schedule`
+  หรือ Actions → กรอง event = `schedule` — ครั้งแรกหลังสร้าง repo อาจรอถึง ~1 ชั่วโมง
+- ต้องการเวลาตรงเป๊ะ (cron GitHub ไม่มี SLA) → ใช้โหมด server บน VPS ที่มี scheduler ในโปรเซส
 - ไม่มี commit 60 วัน GitHub จะปิด scheduled workflow → workflow มี job `keepalive` commit เดือนละครั้งให้แล้ว
 - ไม่มี `/healthz` ให้เช็ค → ดูสถานะได้ที่ `status.errors` ในไฟล์ JSON และหน้า Actions
 - workflow มี step `Validate feed` แล้ว — ไฟล์เสียจะไม่ถูก publish ทับของดี
