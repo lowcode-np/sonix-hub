@@ -16,6 +16,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # the API keys live in this environment (Settings -> Environments -> github-pages)
+    # repository-level secrets work too and do not need this line
+    environment: github-pages
     steps:
       - uses: actions/checkout@v4
 
