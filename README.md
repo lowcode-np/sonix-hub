@@ -3,7 +3,7 @@
 วิเคราะห์ตลาด XAUUSD ทุก 1 ชม. แล้วเผยแพร่เป็น JSON ให้ EA (SONIX AI) ดึงไปใช้
 
 - Python ล้วน (stdlib) **ไม่ต้อง pip install อะไร**
-- 2 โหมด: **Server (API, แนะนำ)** หรือ **Static (Actions + CDN)**
+- 2 โหมด: **Server (API, แนะนำ)** หรือ **Static (GitHub Actions)**
 - MT4/MT5 ดึงได้ทั้งคู่ — รูปแบบ JSON เหมือนกันเป๊ะ
 
 ## ทำไมใช้ `http.server` (stdlib) ทำ Server
@@ -83,7 +83,7 @@ run_local.bat               -> เขียนไฟล์ครั้งเด�
 
 ## Deploy (เลือกอย่างใดอย่างหนึ่ง)
 
-| | **Server (VPS)** | **Static (Actions + CDN)** |
+| | **Server (VPS)** | **Static (GitHub Actions)** |
 |---|---|---|
 | ค่าใช้จ่าย | ฟรีถ้ามี VPS อยู่แล้ว | ฟรี 100% |
 | Latency ที่ EA เห็น | ชี้ตรง tools/loopback | CDN ของ GitHub เร็วมาก |
@@ -123,7 +123,7 @@ curl "http://127.0.0.1:8080/healthz"
 `HUB_STATE_DIR=/data` — เท่านั้นก็เสถียร 24/7 แล้ว (แต่ VPS ราคาใกล้กันยืดหยุ่นกว่า)
 หรืออยู่ plan ฟรีแล้วตั้ง external ping ทุก 10-14 นาที (UptimeRobot / cron-job.org) เพื่อลด cold start
 
-**3. GitHub Actions + CDN — ง่ายสุด ไม่ต้องมี server เลย**
+**3. GitHub Actions — ง่ายสุด ไม่ต้องมี server เลย**
 
  workflow พร้อมใช้อยู่ที่ `.github/workflows/hub.yml` (สำเนาไว้ที่ `workflow/hub.yml` เผื่ออัปโหลดผ่านเว็บ)
 
@@ -132,22 +132,24 @@ curl "http://127.0.0.1:8080/healthz"
    - Secrets: `GEMINI_API_KEY`, `THAILLM_API_KEY` (ตัวใดตัวหนึ่งก็พอ)
    - Variables (ไม่บังคับ): `GEMINI_MODEL`, `THAILLM_MODEL`, `LLM_ORDER`, `FEED_URL`
 3. Actions → sonix-hub → **Run workflow** (รันมือครั้งแรก) → job `build` ต้องเขียว
-4. URL ของ EA: `https://cdn.jsdelivr.net/gh/<user>/<repo>@gh-pages/v1/xauusd.json`
+4. URL ของ EA: `https://raw.githubusercontent.com/<user>/<repo>/gh-pages/v1/xauusd.json`
    - ไม่มี token, ไม่ต้องเปิด firewall, ไม่ต้องมี VPS
-   - MT5 → Allow WebRequest → เพิ่ม `https://cdn.jsdelivr.net`
+   - MT5 → Allow WebRequest → เพิ่ม `https://raw.githubusercontent.com`
 5. ตั้ง Variable `FEED_URL` = URL ข้อ 4 → `history.json` ต่อเนื่องข้ามรอบ (ไม่งั้นเริ่มนับ 1 จุดทุกชั่วโมง)
    - `FEED_URL` = URL ของ feed **ตัวเราเอง** ไม่ใช่แหล่งข่าวภายนอก
    - โค้ดจะตัดชื่อไฟล์ออกแล้วดึง `.../v1/history.json` จากโดเมนเดียวกัน
 
-ทำไมไม่ใช้ Pages ตรง ๆ: workflow อัปโหลด `public/` ไป branch `gh-pages` แล้วเรียก purge cache ของ jsDelivr
-ทุกครั้ง (step `Purge CDN cache`) — ได้ HTTPS + CDN ฟรี และไม่ผูกกับสถานะ Pages builder
-ถ้า Pages ของ repo ทำงานปกติ จะเปิดใช้ `https://<user>.github.io/<repo>/v1/xauusd.json` เป็นทางเลือกที่สองก็ได้
+ทางเลือก CDN อื่น (ช้ากว่า แต่ cache นานกว่า)
+
+- GitHub Pages: `https://<user>.github.io/<repo>/v1/xauusd.json`
+  (branch builder ของ GitHub เองอาจค้าง/error ได้ถ้า publish ถี่ — ใช้ได้เมื่อ site สถานะ `built`)
+- jsDelivr: `https://cdn.jsdelivr.net/gh/<user>/<repo>@gh-pages/v1/xauusd.json`
+  (cache 12 ชม. และ purge ถูก throttle ~1 ครั้ง/ชม. → ไม่เหมาะกับ feed รายชั่วโมง)
 
 ข้อควรรู้ของโหมดนี้
 
 - cron ของ GitHub เป็น best-effort: ปกติคลาด 5-15 นาที, ช่วงคนใช้เยอะอาจช้าเป็นชั่วโมง → EA ต้องเช็ค `ts` + `ttl` ทุกครั้งอยู่แล้ว
-- jsDelivr cache ยาว (12 ชม.) แต่ workflow purge ให้ทุกครั้งหลัง publish → ปกติเห็นของใหม่ภายใน 1 นาที
-  ถ้าค่าไม่ขยับ: เปิด `https://purge.jsdelivr.net/gh/<user>/<repo>@gh-pages/v1/xauusd.json` แล้วโหลดใหม่
+- raw CDN cache 5 นาที (`max-age=300`) → ค่าใหม่ช้าสุด ~5 นาทีหลัง publish ซึ่งอยู่ใน `ttl` 3900 อยู่แล้ว
 - อย่ากด Run workflow รัว ๆ — เสีย Actions minutes โดยไม่จำเป็น (public repo ฟรีแต่ก็เปลืองเวลา)
 - ตรวจว่า schedule ทำงานเองจริง: `gh run list --repo <user>/<repo> --event schedule`
   หรือ Actions → กรอง event = `schedule` — ครั้งแรกหลังสร้าง repo อาจรอถึง ~1 ชั่วโมง
