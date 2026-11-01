@@ -144,7 +144,9 @@ curl "http://127.0.0.1:8080/healthz"
 ข้อควรรู้ของโหมดนี้
 
 - cron ของ GitHub เป็น best-effort: ปกติคลาด 5-15 นาที, ช่วงคนใช้เยอะอาจช้าเป็นชั่วโมง → EA ต้องเช็ค `ts` + `ttl` ทุกครั้งอยู่แล้ว
-- Pages cache ~10 นาที (`Cache-Control`) → อย่าตั้ง `ttl` สั้นกว่า 15 นาที
+- Pages cache ~10 นาที (`Cache-Control: max-age=600`) → อย่าตั้ง `ttl` สั้นกว่า 15 นาที
+  - ต้องการดูไฟล์ดิบที่ยังไม่ผ่าน CDN: `https://raw.githubusercontent.com/<user>/<repo>/gh-pages/v1/xauusd.json`
+  - ไฟล์บน branch คือของจริง; CDN อาจตามช้าสุด ~13 นาที (cache + deploy) ไม่ใช่ feed ค้าง
 - ไม่มี commit 60 วัน GitHub จะปิด scheduled workflow (มีอีเมลแจ้ง) → กด Enable ใหม่หรือให้ bot commit ทุกเดือน
 - ไม่มี `/healthz` ให้เช็ค → ดูสถานะได้ที่ `status.errors` ในไฟล์ JSON และหน้า Actions
 - workflow มี step `Validate feed` แล้ว — ไฟล์เสียจะไม่ถูก publish ทับของดี
