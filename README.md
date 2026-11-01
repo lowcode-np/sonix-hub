@@ -262,6 +262,10 @@ next_event_ts, next_event_impact, news_sentiment, summary_en, summary_th, provid
 ตั้งที่ `https://github.com/<user>/<repo>/settings/secrets/actions`
 Secrets = ค่าลับ (ถูกปิดใน log) / Variables = ค่าธรรมดา (ใครอ่าน repo ก็เห็น)
 
+> ใส่ key ที่ **Environment** `github-pages` แทน Repository secrets ก็ได้
+> แต่ job ต้องประกาศ `environment: github-pages` (มีให้แล้วใน workflow) ไม่งั้นจะเห็นเป็น "not set"
+> และต้องเพิ่ม `main` ใน Environment → Deployment branches ด้วย ไม่งั้น run จะถูกปฏิเสธ
+
 **Server (.env บน VPS / Docker)**
 
 | ตัวแปร | จำเป็น? | หมายเหตุ |
