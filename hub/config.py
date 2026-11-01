@@ -16,7 +16,9 @@ _load_dotenv()
 
 
 def env(name, default=""):
-    return os.environ.get(name, default).strip()
+    # an unset GitHub Variable/Secret reaches us as "" - treat that as "not set" so the
+    # code keeps its built-in default instead of an empty model name / empty LLM order
+    return (os.environ.get(name) or "").strip() or default
 
 
 GEMINI_API_KEY = env("GEMINI_API_KEY")

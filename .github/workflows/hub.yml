@@ -29,7 +29,9 @@ jobs:
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           THAILLM_API_KEY: ${{ secrets.THAILLM_API_KEY }}
           THAILLM_MODEL: ${{ vars.THAILLM_MODEL }}
+          THAILLM_BASE: ${{ vars.THAILLM_BASE }}
           LLM_ORDER: ${{ vars.LLM_ORDER }}
+          RSS_FEEDS: ${{ vars.RSS_FEEDS }}      # empty = built-in list; set to drop sources that 403 from cloud IPs
           FEED_URL: ${{ vars.FEED_URL }}      # keeps history.json between runs
         run: python -m hub.run --out public
 
