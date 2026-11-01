@@ -22,7 +22,7 @@ def env(name, default=""):
 
 
 GEMINI_API_KEY = env("GEMINI_API_KEY")
-GEMINI_MODEL = env("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = env("GEMINI_MODEL", "gemini-3.6-flash")   # gemini-2.5-flash 404s for some API keys
 THAILLM_API_KEY = env("THAILLM_API_KEY")
 THAILLM_BASE = env("THAILLM_BASE", "http://thaillm.or.th/api/v1")
 THAILLM_MODEL = env("THAILLM_MODEL", "typhoon-s-thaillm-8b-instruct")
