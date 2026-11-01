@@ -1,0 +1,6 @@
+.env
+public/
+data/
+bench_result.json
+__pycache__/
+*.pyc

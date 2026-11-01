@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+public/
+data/
+__pycache__/
+*.pyc
+bench_result.json
+tests/

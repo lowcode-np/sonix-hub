@@ -1,0 +1,61 @@
+name: sonix-hub
+
+on:
+  schedule:
+    - cron: "7 * * * *"          # every hour at :07 UTC (GitHub may start a few minutes late)
+  workflow_dispatch: {}          # "Run workflow" button for manual runs
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sonix-hub
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build feed
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          THAILLM_API_KEY: ${{ secrets.THAILLM_API_KEY }}
+          THAILLM_MODEL: ${{ vars.THAILLM_MODEL }}
+          LLM_ORDER: ${{ vars.LLM_ORDER }}
+          FEED_URL: ${{ vars.FEED_URL }}
+        run: python -m hub.run --out public
+
+      - name: Validate feed
+        run: |
+          python - <<'PY'
+          import json
+          d = json.load(open("public/v1/xauusd.json", encoding="utf-8"))
+          assert d["bias"] in ("BUY", "SELL", "NEUTRAL"), d["bias"]
+          assert isinstance(d["ts"], int) and d["ts"] > 0
+          assert isinstance(d["ttl"], int) and d["ttl"] >= 300
+          assert list(d)[:3] == ["ver", "ts", "ttl"], list(d)[:3]
+          print("feed ok:", d["bias"], d["score"], d["provider"], "errors", len(d["status"]["errors"]))
+          PY
+
+      # Publishes ./public to the gh-pages branch -> https://<user>.github.io/<repo>/v1/xauusd.json
+      # Private code repo? set vars.FEED_REPO = "<user>/sonix-feed" (public repo) + secrets.FEED_TOKEN (PAT, repo scope)
+      - name: Publish
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ vars.FEED_REPO == '' && secrets.GITHUB_TOKEN || '' }}
+          personal_token: ${{ vars.FEED_REPO != '' && secrets.FEED_TOKEN || '' }}
+          external_repository: ${{ vars.FEED_REPO }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: sonix-hub-bot
+          user_email: sonix-hub-bot@users.noreply.github.com
+          commit_message: "feed update"

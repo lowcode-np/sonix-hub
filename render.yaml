@@ -1,0 +1,43 @@
+# Render blueprint - Docker deploy of the SONIX Hub API.
+#
+# Free plan (ใช้ทดสอบ/เดโมเท่านั้น ไม่แนะนำให้ EA ตัวจริงชี้มา):
+#   - service sleep หลังไม่มี request ~15 นาที -> scheduler หยุด, ตื่นมาต้อง build ใหม่
+#   - filesystem เป็น ephemeral -> history.json หายทุก restart/deploy
+#   - 512 MB RAM / 0.1 CPU, เพดานชั่วโมงการใช้งานต่อเดือน (หนึ่ง service)
+#   - ไม่มี persistent disk ใน plan ฟรี
+# plan: starter + disk = ไม่ sleep, history อยู่ถาวร (ถูกกว่าหรือพอ ๆ กับ VPS ราคาถูก)
+#
+# FEED_URL = URL ของ feed ตัวเราเองจากที่อื่น (เช่น Pages เดิม) ใช้กู้ history ตอนย้ายมาเท่านั้น
+#            ตั้งเป็น URL ของ service นี้เองไม่ได้ เพราะไฟล์ history ในเครื่องถูกล้างอยู่แล้ว
+#
+# ตั้ง external ping (UptimeRobot / cron-job.org) ทุก 10-14 นาที ถ้าอยากลด cold start บน plan ฟรี
+services:
+  - type: web
+    name: sonix-hub
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: HUB_STATE_DIR
+        value: /tmp/sonix
+      - key: TTL_SEC
+        value: "3900"
+      - key: READY_TIMEOUT
+        value: "60"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: THAILLM_API_KEY
+        sync: false
+      - key: THAILLM_MODEL
+        value: typhoon-s-thaillm-8b-instruct
+      - key: LLM_ORDER
+        value: gemini,thaillm
+      - key: HUB_TOKEN
+        generateValue: true
+      - key: FEED_URL
+        sync: false
