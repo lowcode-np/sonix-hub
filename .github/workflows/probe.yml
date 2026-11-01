@@ -1,0 +1,48 @@
+name: probe-feeds
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe RSS sources from the runner network
+        run: |
+          python - <<'PY'
+          from hub.http import fetch
+          from hub import news
+
+          CANDS = [
+              ("kitco",        "https://www.kitco.com/rss/"),
+              ("mining.com",   "https://www.mining.com/feed/"),
+              ("investing-cm", "https://www.investing.com/rss/news_11.rss"),
+              ("dj-markets",   "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"),
+              ("cnbc-markets", "https://www.cnbc.com/id/100003114/device/rss/rss.html"),
+              ("bbc-business", "https://feeds.bbci.co.uk/news/business/rss.xml"),
+              ("reuters",      "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml"),
+              ("fxstreet",     "https://www.fxstreet.com/rss/news"),
+              ("bls",          "https://www.bls.gov/feed/bls_latest.rss"),
+              ("gnews-macro",  "https://news.google.com/rss/search?q=(gold+OR+XAUUSD+OR+bullion)+AND+(Fed+OR+FOMC+OR+dollar+OR+yields+OR+CPI+OR+inflation)+when:2d&hl=en-US&gl=US&ceid=US:en"),
+              ("gnews-old",    "https://news.google.com/rss/search?q=gold+price+OR+XAUUSD+OR+bullion&hl=en-US&gl=US&ceid=US:en"),
+          ]
+          now = 2**31
+          for name, url in CANDS:
+              try:
+                  txt = fetch(url, timeout=20, retries=0).decode("utf-8", "replace")
+                  items = news.parse(txt, name)
+                  hits = [i for i in items if news._relevant(i["title"], name)]
+                  print(f"{name:<13} OK   items={len(items):<3} relevant={len(hits):<3} {url}")
+                  for h in hits[:3]:
+                      print("    -", h["title"][:110])
+              except Exception as e:
+                  print(f"{name:<13} FAIL {str(e)[:110]}")
+          PY
