@@ -10,11 +10,32 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: github-pages
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: List Gemini models that support generateContent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          key = os.environ.get("GEMINI_API_KEY", "")
+          if not key:
+              raise SystemExit("GEMINI_API_KEY not visible in this job")
+          req = urllib.request.Request(
+              "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
+              headers={"x-goog-api-key": key})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              j = json.load(r)
+          for m in j.get("models", []):
+              if "generateContent" in (m.get("supportedGenerationMethods") or []):
+                  print("MODEL", m["name"].split("/")[-1], "|", m.get("displayName", ""))
+          PY
+
       - name: Probe RSS sources from the runner network
         run: |
           python - <<'PY'
@@ -22,26 +43,20 @@ jobs:
           from hub import news
 
           CANDS = [
-              ("kitco",        "https://www.kitco.com/rss/"),
               ("mining.com",   "https://www.mining.com/feed/"),
-              ("investing-cm", "https://www.investing.com/rss/news_11.rss"),
               ("dj-markets",   "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"),
               ("cnbc-markets", "https://www.cnbc.com/id/100003114/device/rss/rss.html"),
               ("bbc-business", "https://feeds.bbci.co.uk/news/business/rss.xml"),
-              ("reuters",      "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml"),
-              ("fxstreet",     "https://www.fxstreet.com/rss/news"),
-              ("bls",          "https://www.bls.gov/feed/bls_latest.rss"),
               ("gnews-macro",  "https://news.google.com/rss/search?q=(gold+OR+XAUUSD+OR+bullion)+AND+(Fed+OR+FOMC+OR+dollar+OR+yields+OR+CPI+OR+inflation)+when:2d&hl=en-US&gl=US&ceid=US:en"),
-              ("gnews-old",    "https://news.google.com/rss/search?q=gold+price+OR+XAUUSD+OR+bullion&hl=en-US&gl=US&ceid=US:en"),
+              ("gnews-rates",  "https://news.google.com/rss/search?q=(Federal+Reserve+OR+Treasury+yields+OR+CPI+OR+inflation)+when:2d&hl=en-US&gl=US&ceid=US:en"),
           ]
-          now = 2**31
           for name, url in CANDS:
               try:
                   txt = fetch(url, timeout=20, retries=0).decode("utf-8", "replace")
                   items = news.parse(txt, name)
                   hits = [i for i in items if news._relevant(i["title"], name)]
-                  print(f"{name:<13} OK   items={len(items):<3} relevant={len(hits):<3} {url}")
-                  for h in hits[:3]:
+                  print(f"{name:<13} OK   items={len(items):<3} relevant={len(hits):<3}")
+                  for h in hits[:2]:
                       print("    -", h["title"][:110])
               except Exception as e:
                   print(f"{name:<13} FAIL {str(e)[:110]}")
