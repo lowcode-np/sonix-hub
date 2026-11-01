@@ -32,12 +32,12 @@ FEED_URL = env("FEED_URL")            # public URL of the previous xauusd.json (
 TTL_SEC = int(env("TTL_SEC", "3900"))  # hourly run + 5 min margin
 
 RSS_FEEDS = [x for x in env("RSS_FEEDS", "").split("|") if x] or [
-    "https://news.google.com/rss/search?q=gold+price+OR+XAUUSD+OR+bullion&hl=en-US&gl=US&ceid=US:en",
-    "https://news.google.com/rss/search?q=Federal+Reserve+OR+Treasury+yields+OR+US+dollar&hl=en-US&gl=US&ceid=US:en",
+    # Google News, macro-filtered: drops retail "gold rate today" spam
+    "https://news.google.com/rss/search?q=(gold+OR+XAUUSD+OR+bullion)+AND+(Fed+OR+FOMC+OR+dollar+OR+yields+OR+CPI+OR+inflation)+when:2d&hl=en-US&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=(Federal+Reserve+OR+Treasury+yields+OR+CPI+OR+inflation)+when:2d&hl=en-US&gl=US&ceid=US:en",
     "https://www.federalreserve.gov/feeds/press_all.xml",
-    "https://www.fxstreet.com/rss/news",
-    "https://www.bls.gov/feed/bls_latest.rss",
-    "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+    "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "https://www.mining.com/feed/",
 ]
 CALENDAR_URL = env("CALENDAR_URL", "https://nfs.faireconomy.media/ff_calendar_thisweek.json")
 FLOW_SYMBOL = env("FLOW_SYMBOL", "PAXGUSDT")
