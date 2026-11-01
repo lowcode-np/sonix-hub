@@ -247,6 +247,31 @@ next_event_ts, next_event_impact, news_sentiment, summary_en, summary_th, provid
 | `llm.py` | Gemini → ThaiLLM (fallback) | ให้คะแนนข่าว + สรุป EN/TH |
 | `score.py` | กฎคำนวณ (ไม่ใช้ LLM) | bias −100..+100, confidence |
 
+## ต้องใส่อะไรบ้าง (ขั้นต่ำ)
+
+**GitHub Actions (repo → Settings → Secrets and variables → Actions)**
+
+| ชนิด | ชื่อ | จำเป็น? | ถ้าไม่ใส่ |
+|---|---|---|---|
+| Secret | `GEMINI_API_KEY` | ควรใส่ | ยังรันได้ แต่ข่าวไม่ถูกให้คะแนน (`news=0`, `provider="none"`, `degraded=true`) |
+| Secret | `THAILLM_API_KEY` | ไม่ | ใช้เป็น fallback ของ Gemini |
+| Variable | `FEED_URL` | ควรใส่ | `history.json` เริ่มนับ 1 จุดใหม่ทุกชั่วโมง |
+| Variable | `RSS_FEEDS` | ไม่ | ใช้รายการข่าวในตัว (บางแหล่ง 403 จาก IP ของ GitHub) |
+| Variable | `GEMINI_MODEL`, `THAILLM_MODEL`, `THAILLM_BASE`, `LLM_ORDER` | ไม่ | ใช้ค่า default ใน `config.py` |
+
+ตั้งที่ `https://github.com/<user>/<repo>/settings/secrets/actions`
+Secrets = ค่าลับ (ถูกปิดใน log) / Variables = ค่าธรรมดา (ใครอ่าน repo ก็เห็น)
+
+**Server (.env บน VPS / Docker)**
+
+| ตัวแปร | จำเป็น? | หมายเหตุ |
+|---|---|---|
+| `GEMINI_API_KEY` (หรือ `THAILLM_API_KEY`) | ควรใส่ | เหมือนข้างบน |
+| `HUB_TOKEN` | ไม่ | เว้นว่าง = URL ไม่ต้องมี `?k=` |
+| `HOST` / `PORT` | ไม่ | default `0.0.0.0` / `8080` |
+| `HUB_STATE_DIR` | ไม่ | default `public` (ใน Docker ตั้ง `/data`) |
+| `READY_TIMEOUT`, `LOG_LEVEL` | ไม่ | `240`, `INFO` |
+
 ## ตัวแปรสภาพแวดล้อม
 
 | ตัวแปร | ค่าเริ่มต้น | ใช้ทำอะไร |
