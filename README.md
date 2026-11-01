@@ -3,7 +3,7 @@
 วิเคราะห์ตลาด XAUUSD ทุก 1 ชม. แล้วเผยแพร่เป็น JSON ให้ EA (SONIX AI) ดึงไปใช้
 
 - Python ล้วน (stdlib) **ไม่ต้อง pip install อะไร**
-- 2 โหมด: **Server (API, แนะนำ)** หรือ **Static (GitHub Actions + Pages)**
+- 2 โหมด: **Server (API, แนะนำ)** หรือ **Static (Actions + CDN)**
 - MT4/MT5 ดึงได้ทั้งคู่ — รูปแบบ JSON เหมือนกันเป๊ะ
 
 ## ทำไมใช้ `http.server` (stdlib) ทำ Server
@@ -83,7 +83,7 @@ run_local.bat               -> เขียนไฟล์ครั้งเด�
 
 ## Deploy (เลือกอย่างใดอย่างหนึ่ง)
 
-| | **Server (VPS)** | **Static (Actions + Pages)** |
+| | **Server (VPS)** | **Static (Actions + CDN)** |
 |---|---|---|
 | ค่าใช้จ่าย | ฟรีถ้ามี VPS อยู่แล้ว | ฟรี 100% |
 | Latency ที่ EA เห็น | ชี้ตรง tools/loopback | CDN ของ GitHub เร็วมาก |
@@ -123,7 +123,7 @@ curl "http://127.0.0.1:8080/healthz"
 `HUB_STATE_DIR=/data` — เท่านั้นก็เสถียร 24/7 แล้ว (แต่ VPS ราคาใกล้กันยืดหยุ่นกว่า)
 หรืออยู่ plan ฟรีแล้วตั้ง external ping ทุก 10-14 นาที (UptimeRobot / cron-job.org) เพื่อลด cold start
 
-**3. GitHub Actions + Pages — ง่ายสุด ไม่ต้องมี server เลย**
+**3. GitHub Actions + CDN — ง่ายสุด ไม่ต้องมี server เลย**
 
  workflow พร้อมใช้อยู่ที่ `.github/workflows/hub.yml` (สำเนาไว้ที่ `workflow/hub.yml` เผื่ออัปโหลดผ่านเว็บ)
 
@@ -131,24 +131,25 @@ curl "http://127.0.0.1:8080/healthz"
 2. Settings → Secrets and variables → Actions
    - Secrets: `GEMINI_API_KEY`, `THAILLM_API_KEY` (ตัวใดตัวหนึ่งก็พอ)
    - Variables (ไม่บังคับ): `GEMINI_MODEL`, `THAILLM_MODEL`, `LLM_ORDER`, `FEED_URL`
-3. Settings → Pages → Source: **GitHub Actions** (ไม่ต้องมี branch `gh-pages`)
-4. Actions → sonix-hub → **Run workflow** (รันมือครั้งแรก) → ต้องเขียวทั้ง `build` และ `deploy`
-5. URL ของ EA: `https://<user>.github.io/<repo>/v1/xauusd.json`
+3. Actions → sonix-hub → **Run workflow** (รันมือครั้งแรก) → job `build` ต้องเขียว
+4. URL ของ EA: `https://cdn.jsdelivr.net/gh/<user>/<repo>@gh-pages/v1/xauusd.json`
    - ไม่มี token, ไม่ต้องเปิด firewall, ไม่ต้องมี VPS
-   - MT5 → Allow WebRequest → เพิ่ม `https://<user>.github.io`
-6. ตั้ง Variable `FEED_URL` = URL ข้อ 5 → `history.json` ต่อเนื่องข้ามรอบ (ไม่งั้นเริ่มนับ 1 จุดทุกชั่วโมง)
+   - MT5 → Allow WebRequest → เพิ่ม `https://cdn.jsdelivr.net`
+5. ตั้ง Variable `FEED_URL` = URL ข้อ 4 → `history.json` ต่อเนื่องข้ามรอบ (ไม่งั้นเริ่มนับ 1 จุดทุกชั่วโมง)
    - `FEED_URL` = URL ของ feed **ตัวเราเอง** ไม่ใช่แหล่งข่าวภายนอก
    - โค้ดจะตัดชื่อไฟล์ออกแล้วดึง `.../v1/history.json` จากโดเมนเดียวกัน
+
+ทำไมไม่ใช้ Pages ตรง ๆ: workflow อัปโหลด `public/` ไป branch `gh-pages` แล้วเรียก purge cache ของ jsDelivr
+ทุกครั้ง (step `Purge CDN cache`) — ได้ HTTPS + CDN ฟรี และไม่ผูกกับสถานะ Pages builder
+ถ้า Pages ของ repo ทำงานปกติ จะเปิดใช้ `https://<user>.github.io/<repo>/v1/xauusd.json` เป็นทางเลือกที่สองก็ได้
 
 ข้อควรรู้ของโหมดนี้
 
 - cron ของ GitHub เป็น best-effort: ปกติคลาด 5-15 นาที, ช่วงคนใช้เยอะอาจช้าเป็นชั่วโมง → EA ต้องเช็ค `ts` + `ttl` ทุกครั้งอยู่แล้ว
-- Pages cache ~10 นาที (`Cache-Control: max-age=600`) → อย่าตั้ง `ttl` สั้นกว่า 15 นาที
-  - CDN อาจตามช้าสุด ~13 นาทีหลัง deploy (cache + propagation) ไม่ใช่ feed ค้าง
-  - ตรวจว่า build ล่าสุดผ่านจริง: Actions → sonix-hub → job `deploy`
-- อย่ากด Run workflow รัว ๆ: Pages จำกัด build ~10 ครั้ง/ชม. เกินแล้วจะขึ้น "Page build failed"
-  (ตอนนี้ใช้ Actions artifact deploy จึงไม่ติดเพดานเดิม แต่ยังควรปล่อยให้ cron ทำงานเอง)
-- ไม่มี commit 60 วัน GitHub จะปิด scheduled workflow (มีอีเมลแจ้ง) → กด Enable ใหม่หรือให้ bot commit ทุกเดือน
+- jsDelivr cache ยาว (12 ชม.) แต่ workflow purge ให้ทุกครั้งหลัง publish → ปกติเห็นของใหม่ภายใน 1 นาที
+  ถ้าค่าไม่ขยับ: เปิด `https://purge.jsdelivr.net/gh/<user>/<repo>@gh-pages/v1/xauusd.json` แล้วโหลดใหม่
+- อย่ากด Run workflow รัว ๆ — เสีย Actions minutes โดยไม่จำเป็น (public repo ฟรีแต่ก็เปลืองเวลา)
+- ไม่มี commit 60 วัน GitHub จะปิด scheduled workflow → workflow มี job `keepalive` commit เดือนละครั้งให้แล้ว
 - ไม่มี `/healthz` ให้เช็ค → ดูสถานะได้ที่ `status.errors` ในไฟล์ JSON และหน้า Actions
 - workflow มี step `Validate feed` แล้ว — ไฟล์เสียจะไม่ถูก publish ทับของดี
 - ต้องมี Environment `github-pages` (สร้างอัตโนมัติตอนเปิด Pages) และ Deployment branches ต้องอนุญาต `main`
